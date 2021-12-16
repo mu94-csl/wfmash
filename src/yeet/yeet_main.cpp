@@ -35,6 +35,8 @@ int main(int argc, char** argv) {
      */
     unsetenv((char *)"MALLOC_ARENA_MAX");
 
+    printf(" UMAR v1 \n\n");
+
     // get our parameters from the command line
     skch::Parameters map_parameters;
     align::Parameters align_parameters;
