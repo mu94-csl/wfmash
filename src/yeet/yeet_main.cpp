@@ -4,19 +4,19 @@
  * @author  Chirag Jain <cjain7@gatech.edu>
  */
 
-#include <sstream>
-#include <fstream>
-#include <iostream>
-#include <ctime>
 #include <chrono>
-#include <functional>
 #include <cstdio>
+#include <ctime>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <sstream>
 
-#include "map/include/map_parameters.hpp"
 #include "map/include/base_types.hpp"
-#include "map/include/winSketch.hpp"
 #include "map/include/computeMap.hpp"
+#include "map/include/map_parameters.hpp"
 #include "map/include/parseCmdArgs.hpp"
+#include "map/include/winSketch.hpp"
 
 #include "align/include/align_parameters.hpp"
 #include "align/include/computeAlignments.hpp"
@@ -24,16 +24,18 @@
 
 #include "yeet/include/parse_args.hpp"
 
-//External includes
-#include "common/args.hxx"
-#include "common/ALeS.hpp"
+#include "zsim_hooks.h"
 
-int main(int argc, char** argv) {
+//External includes
+#include "common/ALeS.hpp"
+#include "common/args.hxx"
+
+int main(int argc, char **argv) {
     /*
      * Make sure env variable MALLOC_ARENA_MAX is unset 
      * for efficient multi-thread execution
      */
-    unsetenv((char *)"MALLOC_ARENA_MAX");
+    unsetenv((char *) "MALLOC_ARENA_MAX");
 
     printf(" UMAR v1 \n\n");
 
@@ -52,19 +54,19 @@ int main(int argc, char** argv) {
         auto t0 = skch::Time::now();
 
         if (map_parameters.use_spaced_seeds) {
-          std::cerr << "[wfmash::map] Generating spaced seeds" << std::endl;
-          uint32_t seed_weight = map_parameters.spaced_seed_params.weight;
-          uint32_t seed_count = map_parameters.spaced_seed_params.seed_count;
-          float similarity = map_parameters.spaced_seed_params.similarity;
-          uint32_t region_length = map_parameters.spaced_seed_params.region_length;
+            std::cerr << "[wfmash::map] Generating spaced seeds" << std::endl;
+            uint32_t seed_weight = map_parameters.spaced_seed_params.weight;
+            uint32_t seed_count = map_parameters.spaced_seed_params.seed_count;
+            float similarity = map_parameters.spaced_seed_params.similarity;
+            uint32_t region_length = map_parameters.spaced_seed_params.region_length;
 
-          ales::spaced_seeds sps = ales::generate_spaced_seeds(seed_weight, seed_count, similarity, region_length);
-          std::chrono::duration<double> time_spaced_seeds = skch::Time::now() - t0;
-          std::cerr << "[wfmash::map] Time spent generating spaced seeds " << time_spaced_seeds.count()  << " seconds" << std::endl;
-          map_parameters.spaced_seed_sensitivity = sps.sensitivity;
-          map_parameters.spaced_seeds =  sps.seeds;
-          ales::printSpacedSeeds(map_parameters.spaced_seeds);
-          std::cerr << "[wfmash::map] Spaced seed sensitivity " << sps.sensitivity << std::endl;
+            ales::spaced_seeds sps = ales::generate_spaced_seeds(seed_weight, seed_count, similarity, region_length);
+            std::chrono::duration<double> time_spaced_seeds = skch::Time::now() - t0;
+            std::cerr << "[wfmash::map] Time spent generating spaced seeds " << time_spaced_seeds.count() << " seconds" << std::endl;
+            map_parameters.spaced_seed_sensitivity = sps.sensitivity;
+            map_parameters.spaced_seeds = sps.seeds;
+            ales::printSpacedSeeds(map_parameters.spaced_seeds);
+            std::cerr << "[wfmash::map] Spaced seed sensitivity " << sps.sensitivity << std::endl;
         }
 
         //Build the sketch for reference
@@ -88,23 +90,22 @@ int main(int argc, char** argv) {
 
         if (align_parameters.sam_format) {
             std::ofstream outstrm(align_parameters.pafOutputFile);
-            for (auto& x : referSketch.metadata){
+            for (auto &x : referSketch.metadata) {
                 outstrm << "@SQ\tSN:" << x.name << "\tLN:" << x.len << "\n";
             }
             outstrm << "@PG\tID:wfmash\tPN:wfmash\tVN:0.1\tCL:wfmash\n";
             outstrm.close();
         }
-     } else {
-        robin_hood::unordered_flat_map< std::string, std::pair<skch::seqno_t, uint64_t> > seqName_to_seqCounterAndLen;
+    } else {
+        robin_hood::unordered_flat_map<std::string, std::pair<skch::seqno_t, uint64_t>> seqName_to_seqCounterAndLen;
 
         skch::seqno_t seqCounter = 0;
-        for(const auto &fileName : map_parameters.querySequences)
-        {
+        for (const auto &fileName : map_parameters.querySequences) {
             seqiter::for_each_seq_in_file(
                     fileName,
-                    [&](const std::string& seq_name,
-                            const std::string& seq) {
-                        seqName_to_seqCounterAndLen[seq_name] = std::make_pair(seqCounter++,  seq.length());
+                    [&](const std::string &seq_name,
+                        const std::string &seq) {
+                        seqName_to_seqCounterAndLen[seq_name] = std::make_pair(seqCounter++, seq.length());
                     });
         }
 
@@ -113,37 +114,36 @@ int main(int argc, char** argv) {
         align::MappingBoundaryRow currentRecord;
         std::vector<align::MappingBoundaryRow> allReadMappings;
 
-        while (!mappingListStream.eof()){
+        while (!mappingListStream.eof()) {
             std::getline(mappingListStream, mappingRecordLine);
-            if( !mappingRecordLine.empty() ) {
+            if (!mappingRecordLine.empty()) {
                 parseMashmapRow(mappingRecordLine, currentRecord);
 
                 allReadMappings.push_back(currentRecord);
             }
         }
 
-        std::sort(allReadMappings.begin(), allReadMappings.end(), [&seqName_to_seqCounterAndLen](const align::MappingBoundaryRow &a, const align::MappingBoundaryRow &b)
-        {
+        std::sort(allReadMappings.begin(), allReadMappings.end(), [&seqName_to_seqCounterAndLen](const align::MappingBoundaryRow &a, const align::MappingBoundaryRow &b) {
             return (seqName_to_seqCounterAndLen[a.qId].first < seqName_to_seqCounterAndLen[b.qId].first);
         });
 
         std::ofstream outstrm(align_parameters.mashmapPafFile);
-        for(auto &e : allReadMappings)
-        {
+        for (auto &e : allReadMappings) {
             outstrm << e.qId
-            << "\t" << seqName_to_seqCounterAndLen[e.qId].second
-            << "\t" << e.qStartPos
-            << "\t" << e.qEndPos
-            << "\t" << (e.strand == skch::strnd::FWD ? "+" : "-")
-            << "\t" << e.refId
-            << "\t" << seqName_to_seqCounterAndLen[e.refId].second
-            << "\t" << e.rStartPos
-            << "\t" << e.rEndPos
-            << "\t" << 0
-            << "\t" << std::max(e.rEndPos - e.rStartPos, e.qEndPos - e.qStartPos)
-            << "\t" << 255
-            << "\t" << "id:f:" << e.mashmap_estimated_identity * 100.0
-            << "\n";
+                    << "\t" << seqName_to_seqCounterAndLen[e.qId].second
+                    << "\t" << e.qStartPos
+                    << "\t" << e.qEndPos
+                    << "\t" << (e.strand == skch::strnd::FWD ? "+" : "-")
+                    << "\t" << e.refId
+                    << "\t" << seqName_to_seqCounterAndLen[e.refId].second
+                    << "\t" << e.rStartPos
+                    << "\t" << e.rEndPos
+                    << "\t" << 0
+                    << "\t" << std::max(e.rEndPos - e.rStartPos, e.qEndPos - e.qStartPos)
+                    << "\t" << 255
+                    << "\t"
+                    << "id:f:" << e.mashmap_estimated_identity * 100.0
+                    << "\n";
         }
     }
 
@@ -154,6 +154,9 @@ int main(int argc, char** argv) {
     std::chrono::duration<double> timeRefRead = skch::Time::now() - t0;
     std::cerr << "[wfmash::align] time spent read the reference sequences: " << timeRefRead.count() << " sec" << std::endl;
 
+
+    zsim_roi_begin();
+
     //Compute the alignments
     alignObj.compute();
 
@@ -161,5 +164,4 @@ int main(int argc, char** argv) {
     std::cerr << "[wfmash::align] time spent computing the alignment: " << timeAlign.count() << " sec" << std::endl;
 
     std::cerr << "[wfmash::align] alignment results saved in: " << align_parameters.pafOutputFile << std::endl;
-
 }
